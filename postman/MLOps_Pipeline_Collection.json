@@ -1,0 +1,1008 @@
+{
+  "info": {
+    "_postman_id": "mlops-pipeline-comprehensive",
+    "name": "MLOps Pipeline - Complete API Tests",
+    "description": "Comprehensive testing suite for MLOps Pipeline including ML Inference, Data Ingestion, Monitoring, and Load Testing",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "mlops-team"
+  },
+  "item": [
+    {
+      "name": "🤖 ML Inference Service",
+      "item": [
+        {
+          "name": "Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ ML service is healthy\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.status).to.eql(\"healthy\");",
+                  "    pm.expect(response.service).to.eql(\"ml-inference\");",
+                  "});",
+                  "",
+                  "pm.test(\"⏱️ Response time is acceptable\", function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});",
+                  "",
+                  "pm.test(\"📊 Content-Type is correct\", function () {",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
+                  "});",
+                  "",
+                  "console.log(\"🎯 ML Inference Service Health Check: PASSED\");"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}:8001/health",
+              "host": ["{{base_url}}"],
+              "port": "8001",
+              "path": ["health"]
+            },
+            "description": "Validates that the ML Inference service is running and healthy"
+          },
+          "response": []
+        },
+        {
+          "name": "Make Prediction",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Prediction request successful\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"📊 Response contains all required fields\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('prediction');",
+                  "    pm.expect(response).to.have.property('model_version');",
+                  "    pm.expect(response).to.have.property('timestamp');",
+                  "});",
+                  "",
+                  "pm.test(\"🔢 Prediction is valid number\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.prediction).to.be.a('number');",
+                  "    pm.expect(response.prediction).to.be.at.least(0);",
+                  "    pm.expect(response.prediction).to.be.at.most(1);",
+                  "});",
+                  "",
+                  "pm.test(\"🏷️ Model version format is correct\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.model_version).to.match(/^\\d+\\.\\d+\\.\\d+$/);",
+                  "});",
+                  "",
+                  "pm.test(\"⏰ Timestamp is recent\", function () {",
+                  "    const response = pm.response.json();",
+                  "    const responseTime = new Date(response.timestamp * 1000);",
+                  "    const currentTime = new Date();",
+                  "    const timeDiff = currentTime - responseTime;",
+                  "    pm.expect(timeDiff).to.be.below(30000); // Within 30 seconds",
+                  "});",
+                  "",
+                  "// Store prediction for reporting",
+                  "const response = pm.response.json();",
+                  "pm.environment.set(\"last_prediction\", response.prediction);",
+                  "console.log(`🎯 ML Prediction Result: ${response.prediction} (v${response.model_version})`);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"features\": [1.5, 2.3, 4.1, 0.8]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}:8001/predict",
+              "host": ["{{base_url}}"],
+              "port": "8001",
+              "path": ["predict"]
+            },
+            "description": "Sends feature data to ML model and validates prediction response"
+          },
+          "response": []
+        },
+        {
+          "name": "Get ML Metrics",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Metrics endpoint accessible\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"📈 Contains ML prediction metrics\", function () {",
+                  "    const body = pm.response.text();",
+                  "    pm.expect(body).to.include('ml_predictions_total');",
+                  "    pm.expect(body).to.include('ml_prediction_duration_seconds');",
+                  "});",
+                  "",
+                  "pm.test(\"📊 Content type is Prometheus format\", function () {",
+                  "    pm.expect(pm.response.headers.get('Content-Type')).to.include('text/plain');",
+                  "});",
+                  "",
+                  "pm.test(\"🔍 Metrics format is valid\", function () {",
+                  "    const body = pm.response.text();",
+                  "    const lines = body.split('\\n').filter(line => line.trim() !== '');",
+                  "    let hasValidMetrics = false;",
+                  "    lines.forEach(line => {",
+                  "        if (!line.startsWith('#') && line.includes('ml_predictions_total')) {",
+                  "            hasValidMetrics = true;",
+                  "        }",
+                  "    });",
+                  "    pm.expect(hasValidMetrics).to.be.true;",
+                  "});",
+                  "",
+                  "console.log(\"📊 ML Metrics endpoint validated successfully\");"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}:8001/metrics",
+              "host": ["{{base_url}}"],
+              "port": "8001",
+              "path": ["metrics"]
+            },
+            "description": "Retrieves Prometheus metrics from ML Inference service"
+          },
+          "response": []
+        }
+      ],
+      "description": "Complete test suite for ML Inference Service functionality"
+    },
+    {
+      "name": "📥 Data Ingestion Service",
+      "item": [
+        {
+          "name": "Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Data service is healthy\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.status).to.eql(\"healthy\");",
+                  "    pm.expect(response.service).to.eql(\"data-ingestion\");",
+                  "});",
+                  "",
+                  "pm.test(\"⏱️ Response time is acceptable\", function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});",
+                  "",
+                  "console.log(\"🎯 Data Ingestion Service Health Check: PASSED\");"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}:8002/health",
+              "host": ["{{base_url}}"],
+              "port": "8002",
+              "path": ["health"]
+            },
+            "description": "Validates that the Data Ingestion service is running and healthy"
+          },
+          "response": []
+        },
+        {
+          "name": "Ingest Sample Data",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Data ingestion successful\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"📊 Response has correct structure\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('status');",
+                  "    pm.expect(response).to.have.property('id');",
+                  "    pm.expect(response).to.have.property('timestamp');",
+                  "    pm.expect(response.status).to.eql('success');",
+                  "});",
+                  "",
+                  "pm.test(\"🔢 Generated ID is valid\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.id).to.be.a('number');",
+                  "    pm.expect(response.id).to.be.above(0);",
+                  "});",
+                  "",
+                  "pm.test(\"⏰ Timestamp format is valid\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.timestamp).to.be.a('string');",
+                  "    pm.expect(new Date(response.timestamp)).to.be.a('date');",
+                  "});",
+                  "",
+                  "// Store ID for retrieval test",
+                  "const response = pm.response.json();",
+                  "pm.environment.set('last_data_id', response.id);",
+                  "console.log(`📥 Data Ingested Successfully - ID: ${response.id}`);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sensor\": \"temperature_sensor_01\",\n  \"value\": 25.5,\n  \"location\": \"warehouse_a\",\n  \"metadata\": {\n    \"unit\": \"celsius\",\n    \"calibration_date\": \"2025-01-01\"\n  },\n  \"timestamp\": \"{{$isoTimestamp}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}:8002/ingest",
+              "host": ["{{base_url}}"],
+              "port": "8002",
+              "path": ["ingest"]
+            },
+            "description": "Ingests sample sensor data and validates the response"
+          },
+          "response": []
+        },
+        {
+          "name": "Retrieve Data by ID",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Use stored ID or default to 1",
+                  "const dataId = pm.environment.get('last_data_id') || '1';",
+                  "pm.environment.set('current_data_id', dataId);",
+                  "console.log(`🔍 Retrieving data with ID: ${dataId}`);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Data retrieval successful\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"📊 Retrieved data has correct structure\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('data');",
+                  "    pm.expect(response).to.have.property('timestamp');",
+                  "    pm.expect(response).to.have.property('source_ip');",
+                  "    pm.expect(response).to.have.property('id');",
+                  "});",
+                  "",
+                  "pm.test(\"🎯 Retrieved ID matches requested\", function () {",
+                  "    const response = pm.response.json();",
+                  "    const requestedId = parseInt(pm.environment.get('current_data_id'));",
+                  "    pm.expect(response.id).to.eql(requestedId);",
+                  "});",
+                  "",
+                  "pm.test(\"📋 Data content is preserved\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.data).to.be.an('object');",
+                  "    pm.expect(response.data).to.have.property('sensor');",
+                  "});",
+                  "",
+                  "console.log(\"📤 Data Retrieved Successfully\");"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}:8002/data/{{current_data_id}}",
+              "host": ["{{base_url}}"],
+              "port": "8002",
+              "path": ["data", "{{current_data_id}}"]
+            },
+            "description": "Retrieves a specific data record by ID and validates the content"
+          },
+          "response": []
+        },
+        {
+          "name": "List Recent Data",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Data listing successful\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"📊 Response has correct structure\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('total');",
+                  "    pm.expect(response).to.have.property('data');",
+                  "    pm.expect(response.data).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test(\"🔢 Respects limit parameter\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.data.length).to.be.at.most(5);",
+                  "});",
+                  "",
+                  "pm.test(\"📋 Each data item has required fields\", function () {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data.length > 0) {",
+                  "        response.data.forEach(item => {",
+                  "            pm.expect(item).to.have.property('id');",
+                  "            pm.expect(item).to.have.property('timestamp');",
+                  "            pm.expect(item).to.have.property('data');",
+                  "        });",
+                  "    }",
+                  "});",
+                  "",
+                  "const response = pm.response.json();",
+                  "console.log(`📋 Listed ${response.data.length} data records (Total: ${response.total})`);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}:8002/data?limit=5",
+              "host": ["{{base_url}}"],
+              "port": "8002",
+              "path": ["data"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "5",
+                  "description": "Limit number of records returned"
+                }
+              ]
+            },
+            "description": "Retrieves a list of recent data records with pagination"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Data Metrics",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Data metrics endpoint accessible\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"📈 Contains data ingestion metrics\", function () {",
+                  "    const body = pm.response.text();",
+                  "    pm.expect(body).to.include('data_ingestion_total');",
+                  "    pm.expect(body).to.include('data_ingestion_duration_seconds');",
+                  "    pm.expect(body).to.include('data_size_bytes');",
+                  "});",
+                  "",
+                  "pm.test(\"📊 Metrics format is valid\", function () {",
+                  "    const body = pm.response.text();",
+                  "    const lines = body.split('\\n').filter(line => line.trim() !== '');",
+                  "    let hasValidMetrics = false;",
+                  "    lines.forEach(line => {",
+                  "        if (!line.startsWith('#') && line.includes('data_ingestion_total')) {",
+                  "            hasValidMetrics = true;",
+                  "        }",
+                  "    });",
+                  "    pm.expect(hasValidMetrics).to.be.true;",
+                  "});",
+                  "",
+                  "console.log(\"📊 Data Ingestion metrics validated successfully\");"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}:8002/metrics",
+              "host": ["{{base_url}}"],
+              "port": "8002",
+              "path": ["metrics"]
+            },
+            "description": "Retrieves Prometheus metrics from Data Ingestion service"
+          },
+          "response": []
+        }
+      ],
+      "description": "Complete test suite for Data Ingestion Service functionality"
+    },
+    {
+      "name": "📈 Monitoring Services",
+      "item": [
+        {
+          "name": "Prometheus Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Prometheus is accessible\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"📊 Prometheus returns valid response\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('status');",
+                  "    pm.expect(response.status).to.eql('success');",
+                  "    pm.expect(response).to.have.property('data');",
+                  "});",
+                  "",
+                  "pm.test(\"🎯 Services are being monitored\", function () {",
+                  "    const response = pm.response.json();",
+                  "    const results = response.data.result;",
+                  "    pm.expect(results).to.be.an('array');",
+                  "    pm.expect(results.length).to.be.above(0);",
+                  "});",
+                  "",
+                  "// Count active services",
+                  "const response = pm.response.json();",
+                  "const activeServices = response.data.result.filter(result => result.value[1] === '1');",
+                  "console.log(`📈 Prometheus monitoring ${activeServices.length} active services`);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}:9090/api/v1/query?query=up",
+              "host": ["{{base_url}}"],
+              "port": "9090",
+              "path": ["api", "v1", "query"],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "up",
+                  "description": "Query all service health status"
+                }
+              ]
+            },
+            "description": "Validates Prometheus is running and monitoring all services"
+          },
+          "response": []
+        },
+        {
+          "name": "Grafana Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Grafana is accessible\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"💾 Database connection is healthy\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('database');",
+                  "    pm.expect(response.database).to.eql('ok');",
+                  "});",
+                  "",
+                  "pm.test(\"🔧 Grafana version is present\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('version');",
+                  "    pm.expect(response.version).to.be.a('string');",
+                  "});",
+                  "",
+                  "const response = pm.response.json();",
+                  "console.log(`📊 Grafana v${response.version} is healthy and accessible`);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}:3000/api/health",
+              "host": ["{{base_url}}"],
+              "port": "3000",
+              "path": ["api", "health"]
+            },
+            "description": "Validates Grafana dashboard service health and connectivity"
+          },
+          "response": []
+        },
+        {
+          "name": "Check ML Service Metrics",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ ML metrics query successful\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"📊 ML prediction metrics available\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.status).to.eql('success');",
+                  "    pm.expect(response.data.result).to.be.an('array');",
+                  "});",
+                  "",
+                  "// Extract prediction count",
+                  "const response = pm.response.json();",
+                  "if (response.data.result.length > 0) {",
+                  "    const predictionCount = response.data.result[0].value[1];",
+                  "    console.log(`🤖 Total ML Predictions: ${predictionCount}`);",
+                  "} else {",
+                  "    console.log(\"🤖 No ML predictions recorded yet\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}:9090/api/v1/query?query=ml_predictions_total",
+              "host": ["{{base_url}}"],
+              "port": "9090",
+              "path": ["api", "v1", "query"],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "ml_predictions_total",
+                  "description": "Query total ML predictions made"
+                }
+              ]
+            },
+            "description": "Queries Prometheus for ML service metrics to validate monitoring integration"
+          },
+          "response": []
+        }
+      ],
+      "description": "Validation tests for monitoring and observability infrastructure"
+    },
+    {
+      "name": "⚡ Performance & Load Testing",
+      "item": [
+        {
+          "name": "ML Inference Performance Test",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Performance test - prediction successful\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"⚡ Performance test - response time acceptable\", function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                  "});",
+                  "",
+                  "pm.test(\"🔢 Performance test - valid prediction returned\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('prediction');",
+                  "    pm.expect(response.prediction).to.be.a('number');",
+                  "});",
+                  "",
+                  "// Track response times for performance analysis",
+                  "pm.test(\"📊 Record performance metrics\", function () {",
+                  "    const responseTime = pm.response.responseTime;",
+                  "    const currentTimes = pm.environment.get('ml_response_times') || '[]';",
+                  "    const times = JSON.parse(currentTimes);",
+                  "    times.push(responseTime);",
+                  "    ",
+                  "    // Keep only last 10 response times",
+                  "    if (times.length > 10) {",
+                  "        times.shift();",
+                  "    }",
+                  "    ",
+                  "    pm.environment.set('ml_response_times', JSON.stringify(times));",
+                  "    ",
+                  "    // Calculate statistics",
+                  "    const avg = times.reduce((a, b) => a + b, 0) / times.length;",
+                  "    const max = Math.max(...times);",
+                  "    const min = Math.min(...times);",
+                  "    ",
+                  "    console.log(`⚡ ML Performance Stats: Avg: ${avg.toFixed(2)}ms, Min: ${min}ms, Max: ${max}ms`);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"features\": [\n    {{$randomInt}},\n    {{$randomInt}},\n    {{$randomInt}},\n    {{$randomInt}}\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}:8001/predict",
+              "host": ["{{base_url}}"],
+              "port": "8001",
+              "path": ["predict"]
+            },
+            "description": "Performance test with random data to measure ML inference response times"
+          },
+          "response": []
+        },
+        {
+          "name": "Data Ingestion Performance Test",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Performance test - ingestion successful\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"⚡ Performance test - response structure valid\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('status');",
+                  "    pm.expect(response.status).to.eql('success');",
+                  "});",
+                  "",
+                  "// Track ingestion rate and performance",
+                  "pm.test(\"📊 Track ingestion performance\", function () {",
+                  "    const responseTime = pm.response.responseTime;",
+                  "    const currentTime = Date.now();",
+                  "    const lastTime = pm.environment.get('last_ingestion_time') || currentTime;",
+                  "    const timeDiff = currentTime - lastTime;",
+                  "    ",
+                  "    pm.environment.set('last_ingestion_time', currentTime);",
+                  "    ",
+                  "    // Calculate ingestion rate",
+                  "    if (timeDiff > 0) {",
+                  "        const rate = 1000 / timeDiff; // requests per second",
+                  "        console.log(`📥 Ingestion Rate: ${rate.toFixed(2)} req/sec, Response Time: ${responseTime}ms`);",
+                  "    }",
+                  "    ",
+                  "    // Track response times",
+                  "    const currentTimes = pm.environment.get('data_response_times') || '[]';",
+                  "    const times = JSON.parse(currentTimes);",
+                  "    times.push(responseTime);",
+                  "    ",
+                  "    if (times.length > 10) {",
+                  "        times.shift();",
+                  "    }",
+                  "    ",
+                  "    pm.environment.set('data_response_times', JSON.stringify(times));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sensor\": \"load_test_{{$randomInt}}\",\n  \"value\": {{$randomInt}},\n  \"batch_id\": \"{{$guid}}\",\n  \"location\": \"test_facility_{{$randomInt}}\",\n  \"timestamp\": \"{{$isoTimestamp}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}:8002/ingest",
+              "host": ["{{base_url}}"],
+              "port": "8002",
+              "path": ["ingest"]
+            },
+            "description": "Performance test for data ingestion with random payloads"
+          },
+          "response": []
+        },
+        {
+          "name": "Concurrent Load Test",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Concurrent load test successful\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"⚡ Load test - system remains responsive\", function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(10000);",
+                  "});",
+                  "",
+                  "// Performance tracking for load testing",
+                  "const responseTime = pm.response.responseTime;",
+                  "const testNumber = pm.environment.get('load_test_count') || 0;",
+                  "pm.environment.set('load_test_count', parseInt(testNumber) + 1);",
+                  "",
+                  "console.log(`🔥 Load Test #${parseInt(testNumber) + 1}: ${responseTime}ms`);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"features\": [\n    {{$randomFloat}},\n    {{$randomFloat}},\n    {{$randomFloat}},\n    {{$randomFloat}}\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}:8001/predict",
+              "host": ["{{base_url}}"],
+              "port": "8001",
+              "path": ["predict"]
+            },
+            "description": "Concurrent load testing to validate system performance under stress"
+          },
+          "response": []
+        }
+      ],
+      "description": "Performance and load testing scenarios to validate system scalability"
+    },
+    {
+      "name": "🚨 Error Handling Tests",
+      "item": [
+        {
+          "name": "Invalid ML Prediction Request",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Invalid request properly rejected\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"📝 Error response has correct structure\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('error');",
+                  "    pm.expect(response.error).to.be.a('string');",
+                  "    pm.expect(response.error).to.include('features');",
+                  "});",
+                  "",
+                  "console.log(\"🚨 Invalid ML request properly handled\");"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invalid_field\": \"test\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}:8001/predict",
+              "host": ["{{base_url}}"],
+              "port": "8001",
+              "path": ["predict"]
+            },
+            "description": "Tests error handling for invalid ML prediction requests"
+          },
+          "response": []
+        },
+        {
+          "name": "Empty Data Ingestion",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Empty request properly rejected\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"📝 Error message is descriptive\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('error');",
+                  "    pm.expect(response.error).to.include('No data provided');",
+                  "});",
+                  "",
+                  "console.log(\"🚨 Empty data request properly handled\");"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{base_url}}:8002/ingest",
+              "host": ["{{base_url}}"],
+              "port": "8002",
+              "path": ["ingest"]
+            },
+            "description": "Tests error handling for empty data ingestion requests"
+          },
+          "response": []
+        },
+        {
+          "name": "Non-existent Data Retrieval",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Non-existent data returns 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test(\"📝 404 response has error message\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('error');",
+                  "    pm.expect(response.error).to.include('not found');",
+                  "});",
+                  "",
+                  "console.log(\"🚨 Non-existent data request properly handled\");"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}:8002/data/99999",
+              "host": ["{{base_url}}"],
+              "port": "8002",
+              "path": ["data", "99999"]
+            },
+            "description": "Tests error handling for requests to non-existent data records"
+          },
+          "response": []
+        }
+      ],
+      "description": "Error handling and edge case validation tests"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Collection-level pre-request script",
+          "pm.globals.set('test_start_time', new Date().toISOString());",
+          "",
+          "// Generate random test data",
+          "pm.globals.set('random_sensor_value', Math.random() * 100);",
+          "pm.globals.set('random_features', JSON.stringify([",
+          "    Math.random() * 10,",
+          "    Math.random() * 10,",
+          "    Math.random() * 10,",
+          "    Math.random() * 10",
+          "]));",
+          "",
+          "// Initialize test counters",
+          "if (!pm.environment.get('tests_run')) {",
+          "    pm.environment.set('tests_run', 0);",
+          "    pm.environment.set('tests_passed', 0);",
+          "    pm.environment.set('tests_failed', 0);",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Collection-level test tracking",
+          "const testCount = parseInt(pm.environment.get('tests_run') || 0) + 1;",
+          "pm.environment.set('tests_run', testCount);",
+          "",
+          "// Track pass/fail status",
+          "const results = pm.response.json ? pm.response.code : 0;",
+          "if (pm.response.code >= 200 && pm.response.code < 400) {",
+          "    const passed = parseInt(pm.environment.get('tests_passed') || 0) + 1;",
+          "    pm.environment.set('tests_passed', passed);",
+          "} else {",
+          "    const failed = parseInt(pm.environment.get('tests_failed') || 0) + 1;",
+          "    pm.environment.set('tests_failed', failed);",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://3.0.199.135",
+      "type": "string",
+      "description": "Base URL for MLOps Pipeline services"
+    },
+    {
+      "key": "api_version",
+      "value": "v1",
+      "type": "string",
+      "description": "API version for service endpoints"
+    }
+  ]
+}
