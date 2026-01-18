@@ -121,7 +121,7 @@ jobs:
           docker push $IMAGE_NAME:latest
 
   # -------------------------------------------------
-  # 4. DEPLOY SERVICES TO EC2
+  # 4. DEPLOY SERVICES TO EC2 update
   # -------------------------------------------------
   deploy-services:
     needs: [deploy-infrastructure, build-and-push]
