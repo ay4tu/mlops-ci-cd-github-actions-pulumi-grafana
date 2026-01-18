@@ -2,30 +2,22 @@ version: "3.8"
 
 services:
   ml-inference:
-    image: ${ML_INFERENCE_IMAGE}
+    build: ./services/ml-inference
     ports:
       - "8001:8001"
-    restart: always
+    environment:
+      - FLASK_ENV=development
     networks:
       - mlops-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   data-ingestion:
-    image: ${DATA_INGESTION_IMAGE}
+    build: ./services/data-ingestion
     ports:
       - "8002:8002"
-    restart: always
+    environment:
+      - FLASK_ENV=development
     networks:
       - mlops-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   prometheus:
     image: prom/prometheus:latest
@@ -45,8 +37,8 @@ services:
     ports:
       - "3000:3000"
     environment:
-      GF_SECURITY_ADMIN_PASSWORD: admin
-      GF_USERS_ALLOW_SIGN_UP: "false"
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
     volumes:
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
