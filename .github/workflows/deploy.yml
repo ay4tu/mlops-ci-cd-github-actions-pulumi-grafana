@@ -37,13 +37,7 @@ jobs:
           if [ -d "tests" ]; then
             pytest tests/ -v
           else
-            python - <<EOF
-            from app import app
-            client = app.test_client()
-            res = client.get("/health")
-            assert res.status_code == 200
-            print("Health check OK")
-            EOF
+            python -c "from app import app; c=app.test_client(); r=c.get('/health'); assert r.status_code==200; print('Health check OK')"
           fi
 
   # -------------------------------------------------
